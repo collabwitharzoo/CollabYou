@@ -1214,7 +1214,9 @@
       else { el.classList.add('error'); err.textContent = msg; return false; }
     }
 
-    document.getElementById('applyForm').addEventListener('submit', function(e) {
+    const BACKEND_URL = 'https://collabyou-backend.up.railway.app'; // update after deploy
+
+    document.getElementById('applyForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const urlRe   = /^https?:\/\/.+/;
@@ -1241,14 +1243,40 @@
         document.querySelector('.error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
+
       const btn = document.getElementById('submitBtn');
       btn.classList.add('loading'); btn.disabled = true;
-      setTimeout(() => {
+
+      try {
+        const payload = {
+          fullName:   document.getElementById('fullName').value.trim(),
+          email:      document.getElementById('email').value.trim(),
+          phone:      document.getElementById('phone').value.trim(),
+          location:   document.getElementById('location').value.trim(),
+          platform:   document.getElementById('platform').value,
+          handle:     document.getElementById('handle').value.trim(),
+          profileUrl: document.getElementById('profileUrl').value.trim(),
+          followers:  document.getElementById('followers').value,
+          niche:      document.getElementById('niche').value,
+          engagement: document.getElementById('engagement').value.trim(),
+        };
+
+        const res = await fetch(`${BACKEND_URL}/api/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Submission failed');
+
         document.getElementById('applyForm').style.display = 'none';
         const sc = document.getElementById('successCard');
         sc.classList.add('show');
         sc.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 1800);
+      } catch {
+        btn.classList.remove('loading'); btn.disabled = false;
+        alert('Something went wrong. Please try again.');
+      }
     });
 
     function resetForm() {

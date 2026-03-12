@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CollabYou Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --indigo: #1e2d5e; --indigo-mid: #3a4f8a; --terra: #b85c3a;
+      --gold: #c49040; --cream: #fdfaf4; --white: #fff;
+      --text: #1e2838; --muted: #6a7090; --border: #e4ddd8;
+      --green: #1a6b5a; --red: #c0392b;
+    }
+    body { font-family: system-ui, sans-serif; background: var(--cream); color: var(--text); }
+
+    /* LOGIN */
+    #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-card { background: var(--white); border-radius: 20px; padding: 48px 40px; width: 100%; max-width: 400px; box-shadow: 0 8px 40px rgba(30,45,94,0.1); }
+    .login-card h1 { font-size: 1.8rem; color: var(--indigo); margin-bottom: 6px; }
+    .login-card p { color: var(--muted); font-size: 0.88rem; margin-bottom: 32px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .field label { font-size: 0.78rem; font-weight: 600; color: var(--text); }
+    .field input { border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 14px; font-size: 0.9rem; outline: none; }
+    .field input:focus { border-color: var(--indigo-mid); }
+    .btn-login { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--indigo), var(--indigo-mid)); color: var(--white); border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-login:hover { opacity: 0.92; }
+    .err { color: var(--red); font-size: 0.82rem; margin-top: 10px; text-align: center; }
+
+    /* DASHBOARD */
+    #dashboard { display: none; }
+    .topbar { background: var(--indigo); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .topbar h2 { color: var(--white); font-size: 1.1rem; font-weight: 700; letter-spacing: 0.04em; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .topbar-right span { color: rgba(255,255,255,0.5); font-size: 0.82rem; }
+    .btn-logout { background: rgba(255,255,255,0.1); color: var(--white); border: none; border-radius: 8px; padding: 7px 16px; font-size: 0.8rem; cursor: pointer; }
+    .btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+    .main { padding: 32px; max-width: 1200px; margin: 0 auto; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--white); border-radius: 14px; padding: 20px 24px; border: 1px solid var(--border); }
+    .stat-card .num { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-card .lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-top: 4px; }
+    .s-total .num { color: var(--indigo); }
+    .s-pending .num { color: var(--gold); }
+    .s-approved .num { color: var(--green); }
+    .s-rejected .num { color: var(--red); }
+
+    .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .filter-btn { padding: 7px 18px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--white); font-size: 0.8rem; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { background: var(--indigo); border-color: var(--indigo); color: var(--white); }
+    .search-box { margin-left: auto; padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 0.85rem; outline: none; min-width: 220px; }
+    .search-box:focus { border-color: var(--indigo-mid); }
+
+    table { width: 100%; background: var(--white); border-radius: 14px; border-collapse: collapse; overflow: hidden; box-shadow: 0 2px 12px rgba(30,45,94,0.06); }
+    th { background: var(--indigo); color: rgba(255,255,255,0.7); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 16px; text-align: left; }
+    td { padding: 14px 16px; font-size: 0.85rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f7f4f0; }
+    .badge { display: inline-block; padding: 3px 12px; border-radius: 100px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+    .badge-pending  { background: #fef3cd; color: #856404; }
+    .badge-approved { background: #d1f0e8; color: #0a5c3c; }
+    .badge-rejected { background: #fde8e8; color: #8b0000; }
+    .btn-view { background: var(--indigo); color: var(--white); border: none; border-radius: 7px; padding: 5px 14px; font-size: 0.78rem; cursor: pointer; }
+    .btn-view:hover { background: var(--indigo-mid); }
+
+    /* MODAL */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--white); border-radius: 20px; padding: 36px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; position: relative; }
+    .modal h3 { font-size: 1.4rem; color: var(--indigo); margin-bottom: 20px; }
+    .modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); }
+    .detail-row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 0.88rem; }
+    .detail-row b { color: var(--indigo); min-width: 110px; flex-shrink: 0; }
+    .detail-row a { color: var(--terra); text-decoration: underline; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+    .btn-approve { background: var(--green); color: var(--white); border: none; border-radius: 9px; padding: 9px 22px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+    .btn-reject  { background: var(--red); color: var(--white); border: none; border-radius: 9px; padding: 9px 22px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+    .btn-delete  { background: #f0f0f0; color: var(--text); border: none; border-radius: 9px; padding: 9px 22px; font-size: 0.85rem; cursor: pointer; margin-left: auto; }
+    .notes-box { width: 100%; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 0.85rem; resize: vertical; min-height: 80px; outline: none; margin-top: 12px; }
+    .notes-box:focus { border-color: var(--indigo-mid); }
+    .save-notes { background: var(--indigo); color: var(--white); border: none; border-radius: 9px; padding: 8px 18px; font-size: 0.82rem; cursor: pointer; margin-top: 8px; }
+    .empty { text-align: center; padding: 60px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>CollabYou</h1>
+    <p>Admin Dashboard — sign in to continue</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@collabyou.in" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••" />
+    </div>
+    <button class="btn-login" onclick="login()">Sign In</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="topbar">
+    <h2>CollabYou Admin</h2>
+    <div class="topbar-right">
+      <span id="adminEmail"></span>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="stats-row">
+      <div class="stat-card s-total"><div class="num" id="st-total">—</div><div class="lbl">Total</div></div>
+      <div class="stat-card s-pending"><div class="num" id="st-pending">—</div><div class="lbl">Pending</div></div>
+      <div class="stat-card s-approved"><div class="num" id="st-approved">—</div><div class="lbl">Approved</div></div>
+      <div class="stat-card s-rejected"><div class="num" id="st-rejected">—</div><div class="lbl">Rejected</div></div>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" onclick="setFilter('', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
+      <button class="filter-btn" onclick="setFilter('approved', this)">Approved</button>
+      <button class="filter-btn" onclick="setFilter('rejected', this)">Rejected</button>
+      <input class="search-box" id="searchBox" placeholder="Search by name, platform, niche…" oninput="renderTable()" />
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Platform</th><th>Followers</th><th>Niche</th><th>Location</th><th>Status</th><th>Date</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <h3 id="mName"></h3>
+    <div id="mDetails"></div>
+    <div class="modal-actions">
+      <button class="btn-approve" onclick="updateStatus('approved')">Approve</button>
+      <button class="btn-reject"  onclick="updateStatus('rejected')">Reject</button>
+      <button class="btn-delete"  onclick="deleteApp()">Delete</button>
+    </div>
+    <div style="margin-top:20px;">
+      <label style="font-size:0.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Notes</label>
+      <textarea class="notes-box" id="mNotes" placeholder="Add internal notes…"></textarea>
+      <button class="save-notes" onclick="saveNotes()">Save Notes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = window.location.origin;
+  let token = localStorage.getItem('cy_token') || '';
+  let allApps = [];
+  let currentFilter = '';
+  let currentApp = null;
+
+  if (token) showDashboard();
+
+  async function login() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPass').value;
+    document.getElementById('loginErr').textContent = '';
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      token = data.token;
+      localStorage.setItem('cy_token', token);
+      document.getElementById('adminEmail').textContent = email;
+      showDashboard();
+    } catch (err) {
+      document.getElementById('loginErr').textContent = err.message;
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('cy_token');
+    token = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  async function showDashboard() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    await loadApps();
+  }
+
+  async function loadApps() {
+    try {
+      const res = await fetch(`${API}/api/applications`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 401) { logout(); return; }
+      allApps = await res.json();
+      updateStats();
+      renderTable();
+    } catch { console.error('Failed to load applications'); }
+  }
+
+  function updateStats() {
+    document.getElementById('st-total').textContent    = allApps.length;
+    document.getElementById('st-pending').textContent  = allApps.filter(a => a.status === 'pending').length;
+    document.getElementById('st-approved').textContent = allApps.filter(a => a.status === 'approved').length;
+    document.getElementById('st-rejected').textContent = allApps.filter(a => a.status === 'rejected').length;
+  }
+
+  function setFilter(status, btn) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function renderTable() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    let list = allApps
+      .filter(a => !currentFilter || a.status === currentFilter)
+      .filter(a => !q || [a.fullName, a.platform, a.niche, a.location].join(' ').toLowerCase().includes(q));
+
+    const tbody = document.getElementById('tableBody');
+    if (!list.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty">No applications found.</td></tr>`; return; }
+
+    tbody.innerHTML = list.map(a => `
+      <tr>
+        <td><b>${a.fullName}</b><br/><span style="color:var(--muted);font-size:0.78rem;">${a.email}</span></td>
+        <td>${a.platform}<br/><span style="color:var(--muted);font-size:0.78rem;">${a.handle}</span></td>
+        <td>${a.followers}</td>
+        <td>${a.niche}</td>
+        <td>${a.location}</td>
+        <td><span class="badge badge-${a.status}">${a.status}</span></td>
+        <td style="font-size:0.78rem;color:var(--muted);">${new Date(a.createdAt).toLocaleDateString('en-IN')}</td>
+        <td><button class="btn-view" onclick="openModal('${a._id}')">View</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function openModal(id) {
+    currentApp = allApps.find(a => a._id === id);
+    if (!currentApp) return;
+    document.getElementById('mName').textContent = currentApp.fullName;
+    document.getElementById('mNotes').value = currentApp.notes || '';
+    document.getElementById('mDetails').innerHTML = `
+      <div class="detail-row"><b>Email</b> <span>${currentApp.email}</span></div>
+      <div class="detail-row"><b>Phone</b> <span>${currentApp.phone}</span></div>
+      <div class="detail-row"><b>Location</b> <span>${currentApp.location}</span></div>
+      <div class="detail-row"><b>Platform</b> <span>${currentApp.platform} — ${currentApp.handle}</span></div>
+      <div class="detail-row"><b>Profile</b> <a href="${currentApp.profileUrl}" target="_blank">${currentApp.profileUrl}</a></div>
+      <div class="detail-row"><b>Followers</b> <span>${currentApp.followers}</span></div>
+      <div class="detail-row"><b>Niche</b> <span>${currentApp.niche}</span></div>
+      <div class="detail-row"><b>Engagement</b> <span>${currentApp.engagement}</span></div>
+      <div class="detail-row"><b>Status</b> <span class="badge badge-${currentApp.status}">${currentApp.status}</span></div>
+      <div class="detail-row"><b>Applied</b> <span>${new Date(currentApp.createdAt).toLocaleString('en-IN')}</span></div>
+    `;
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('overlay')) closeModalDirect();
+  }
+  function closeModalDirect() {
+    document.getElementById('overlay').classList.remove('open');
+    currentApp = null;
+  }
+
+  async function updateStatus(status) {
+    if (!currentApp) return;
+    await fetch(`${API}/api/applications/${currentApp._id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status })
+    });
+    closeModalDirect();
+    await loadApps();
+  }
+
+  async function saveNotes() {
+    if (!currentApp) return;
+    const notes = document.getElementById('mNotes').value;
+    await fetch(`${API}/api/applications/${currentApp._id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ notes })
+    });
+    currentApp.notes = notes;
+  }
+
+  async function deleteApp() {
+    if (!currentApp || !confirm('Delete this application?')) return;
+    await fetch(`${API}/api/applications/${currentApp._id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+    });
+    closeModalDirect();
+    await loadApps();
+  }
+</script>
+</body>
+</html>
